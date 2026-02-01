@@ -12,34 +12,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Remove old artifacts
-      uses: c-hive/gha-remove-artifacts@master
-      with:
-        age: '1 day'
-        skip-recent: 4
-        GITHUB_TOKEN: ${{ github.token }}
+      - name: Remove old artifacts
+        uses: c-hive/gha-remove-artifacts@v1.4.0
+        with:
+          age: '1 day'
+          skip-recent: 4
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   ovmf:
     needs: remove-old-artifacts
     runs-on: ubuntu-latest
 
     steps:
-    # WARNING: Needed due to GitHub Actions disk space regression on Linux runners
-    - name: Obtain maximum storage
-      run: |
-        sudo swapoff -a
-        sudo rm -f /swapfile
-        sudo apt clean
-        docker rmi $(docker image ls -aq)
-        df -h
-    - uses: actions/checkout@v2.5.0
-      with:
-        fetch-depth: 0
-    - name: Build patched OVMF
-      run: |
-        ./bin/build.sh
-    - uses: actions/upload-artifact@v2.0.1
-      continue-on-error: true
-      with:
-        name: ovmf-patched
-        path: build/ovmf-vbios-patched.tgz
+      # WARNING: Needed due to GitHub Actions disk space regression on Linux runners
+      - name: Obtain maximum storage
+        run: |
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls -aq) || true
+          df -h
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build patched OVMF
+        run: |
+          ./bin/build.sh
+
+      - name: Upload patched OVMF artifact
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ovmf-patched
+          path: build/ovmf-vbios-patched.tgz
